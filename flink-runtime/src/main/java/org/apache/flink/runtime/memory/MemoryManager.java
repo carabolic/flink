@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.memory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -27,12 +28,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.flink.core.memory.HeapMemorySegment;
 import org.apache.flink.core.memory.HybridMemorySegment;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemoryType;
+import org.apache.flink.runtime.operators.resettable.SpillingResettableMutableObjectIterator;
 import org.apache.flink.util.MathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +103,9 @@ public class MemoryManager {
 	/** flag whether the close() has already been invoked */
 	private boolean isShutDown;
 
+	/** Persisted input data sets */
+	private HashMap<String, SpillingResettableMutableObjectIterator> persistedResults;
+
 
 	/**
 	 * Creates a memory manager with the given capacity, using the default page size.
@@ -140,6 +146,8 @@ public class MemoryManager {
 		this.memoryType = memoryType;
 		this.memorySize = memorySize;
 		this.numberOfSlots = numberOfSlots;
+
+		this.persistedResults = new HashMap<>();
 
 		// assign page size and bit utilities
 		this.pageSize = pageSize;
@@ -188,6 +196,14 @@ public class MemoryManager {
 	 * code that allocated them from the memory manager.
 	 */
 	public void shutdown() {
+		try {
+			for (Map.Entry<String, SpillingResettableMutableObjectIterator> persist : persistedResults.entrySet()) {
+				persist.getValue().close();
+			}
+		} catch(IOException e) {
+			throw new RuntimeException(e);
+		}
+
 		// -------------------- BEGIN CRITICAL SECTION -------------------
 		synchronized (lock)
 		{
@@ -234,6 +250,17 @@ public class MemoryManager {
 	// ------------------------------------------------------------------------
 	//  Memory allocation and release
 	// ------------------------------------------------------------------------
+
+	public SpillingResettableMutableObjectIterator getPersistedInput(String key) {
+		return this.persistedResults.get(key);
+	}
+
+	public void putPersistedInput(String key, SpillingResettableMutableObjectIterator iterator) {
+		if (this.persistedResults.containsKey(key)) {
+			throw new RuntimeException("Persisted results already exist in memory");
+		} else {
+			this.persistedResults.put(key, iterator);
+		}}
 
 	/**
 	 * Allocates a set of memory segments from this memory manager. If the memory manager pre-allocated the

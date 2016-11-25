@@ -40,6 +40,9 @@ public enum DriverStrategy {
 	// a binary no-op operator. non implementation available
 	BINARY_NO_OP(null, null, PIPELINED, PIPELINED, 0),
 
+	// persist
+	PERSIST(NoOpDriver.class, null, PIPELINED, 0),
+
 	// the proper mapper
 	MAP(MapDriver.class, ChainedMapDriver.class, PIPELINED, 0),
 

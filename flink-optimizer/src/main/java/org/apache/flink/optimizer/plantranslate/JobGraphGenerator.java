@@ -832,6 +832,11 @@ public class JobGraphGenerator implements Visitor<PlanNode> {
 			
 			config = new TaskConfig(vertex.getConfiguration());
 			config.setDriver(ds.getDriverClass());
+
+			// set persist node
+			if (ds == DriverStrategy.PERSIST) {
+				config.setPersistTask();
+			}
 		}
 		
 		// set user code

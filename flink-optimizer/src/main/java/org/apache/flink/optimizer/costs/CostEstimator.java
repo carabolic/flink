@@ -171,6 +171,7 @@ public abstract class CostEstimator {
 		case UNARY_NO_OP:
 		case BINARY_NO_OP:
 		case MAP:
+		case PERSIST:
 		case MAP_PARTITION:
 		case FLAT_MAP:
 			

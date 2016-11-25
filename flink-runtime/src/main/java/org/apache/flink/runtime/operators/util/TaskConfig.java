@@ -121,6 +121,8 @@ public class TaskConfig implements Serializable {
 	private static final String INPUT_DAM_MEMORY_PREFIX = "in.dam.mem.";
 	
 	private static final String BROADCAST_INPUT_NAME_PREFIX = "in.broadcast.name.";
+
+	private static final String INPUT_PERSIST = "in.input.persist";
 	
 	
 	// -------------------------------------- Outputs ---------------------------------------------
@@ -234,6 +236,9 @@ public class TaskConfig implements Serializable {
 	// --------------------------------------------------------------------------------------------
 	//                         Members, Constructors, and Accessors
 	// --------------------------------------------------------------------------------------------
+
+	/** Whether this task config corresponds to a Persist task. */
+	protected boolean isPersistent = false;
 	
 	protected final Configuration config;			// the actual configuration holding the values
 	
@@ -258,7 +263,15 @@ public class TaskConfig implements Serializable {
 	// --------------------------------------------------------------------------------------------
 	//                                       User Code
 	// --------------------------------------------------------------------------------------------
-	
+
+	public void setPersistTask() {
+		this.config.setBoolean(INPUT_PERSIST, true);
+	}
+
+	public boolean isPersistTask() {
+		return this.config.getBoolean(INPUT_PERSIST, false);
+	}
+
 	public void setTaskName(String name) {
 		if (name != null) {
 			this.config.setString(TASK_NAME, name);
@@ -495,7 +508,11 @@ public class TaskConfig implements Serializable {
 	}
 	
 	public double getRelativeInputMaterializationMemory(int inputNum) {
-		return this.config.getDouble(INPUT_DAM_MEMORY_PREFIX + inputNum, 0);
+		if (this.isPersistTask()) {
+			return 1.0;
+		} else {
+			return this.config.getDouble(INPUT_DAM_MEMORY_PREFIX + inputNum, 0);
+		}
 	}
 	
 	public void setBroadcastInputName(String name, int groupIndex) {
